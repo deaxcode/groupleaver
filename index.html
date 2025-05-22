@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>GroupDM自動退出ツール（自己責任）</title>
+</head>
+<body>
+  <h2>⚠ 自己責任で使ってください ⚠</h2>
+  <p>あなたのDiscordトークンを入力してください：</p>
+  <input type="password" id="token" placeholder="User Token">
+  <button onclick="leaveGroupDMs()">実行</button>
+  <pre id="log"></pre>
+
+  <script>
+    async function leaveGroupDMs() {
+      const token = document.getElementById("token").value;
+      const log = document.getElementById("log");
+      log.textContent = "取得中...\n";
+
+      const res = await fetch("https://discord.com/api/v9/users/@me/channels", {
+        headers: {
+          "Authorization": token
+        }
+      });
+
+      const channels = await res.json();
+
+      const groupDMs = channels.filter(ch => ch.type === 3); // Group DM
+
+      if (groupDMs.length === 0) {
+        log.textContent += "グループDMなし。\n";
+        return;
+      }
+
+      let success = 0, fail = 0;
+
+      for (const ch of groupDMs) {
+        try {
+          const del = await fetch(`https://discord.com/api/v9/channels/${ch.id}`, {
+            method: "DELETE",
+            headers: {
+              "Authorization": token
+            }
+          });
+
+          if (del.status === 200 || del.status === 204) {
+            log.textContent += `✅ ${ch.id} 退出成功\n`;
+            success++;
+          } else {
+            log.textContent += `❌ ${ch.id} 退出失敗 (${del.status})\n`;
+            fail++;
+          }
+        } catch (err) {
+          log.textContent += `❌ ${ch.id} 例外エラー\n`;
+          fail++;
+        }
+      }
+
+      log.textContent += `完了 → 成功: ${success}件 / 失敗: ${fail}件\n`;
+    }
+  </script>
+</body>
+</html>
